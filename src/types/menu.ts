@@ -41,6 +41,19 @@ export interface RestaurantInfo {
   showAllergens?: boolean;
   showRatings?: boolean;
   enableCart?: boolean;
+  enableBooking?: boolean;
+  enableOnlineOrdering?: boolean;
+  enableLoyaltyProgram?: boolean;
+  enableReviews?: boolean;
+  enableMultiLanguage?: boolean;
+  enableSocialSharing?: boolean;
+  enableAnalytics?: boolean;
+  enableQRCode?: boolean;
+  enableAutoBackup?: boolean;
+  enableSeasonalMenus?: boolean;
+  enableTimeBasedMenus?: boolean;
+  enablePromotions?: boolean;
+  enableInventoryManagement?: boolean;
 }
 
 export interface MenuStyle {
@@ -66,6 +79,16 @@ export interface MenuStyle {
   shadowIntensity: number;
   animations?: boolean;
   theme?: 'light' | 'dark';
+  enableMotionEffects?: boolean;
+  customFonts?: string[];
+  enableSearch?: boolean;
+  enableFeaturedItems?: boolean;
+  enableLivePreview?: boolean;
+  customTemplateOptions?: {
+    seasonalThemes?: boolean;
+    specialEvents?: boolean;
+    holidayDecorations?: boolean;
+  };
 }
 
 export interface MenuTemplate {
@@ -79,6 +102,24 @@ export interface MenuTemplate {
   createdBy?: string;
 }
 
+export interface AIMenuSuggestion {
+  id: string;
+  type: 'category' | 'item' | 'style' | 'template';
+  name: string;
+  description: string;
+  data: MenuCategory | MenuItem | Partial<MenuStyle> | Partial<MenuTemplate>;
+  createdAt: Date;
+  applied: boolean;
+}
+
+export interface AIPromptHistory {
+  id: string;
+  prompt: string;
+  response: string;
+  suggestions: AIMenuSuggestion[];
+  createdAt: Date;
+}
+
 export interface MenuProject {
   id: string;
   name: string;
@@ -90,4 +131,5 @@ export interface MenuProject {
   updatedAt: Date;
   hasCart: boolean;
   version?: string;
+  aiHistory?: AIPromptHistory[];
 }

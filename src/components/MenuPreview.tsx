@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MenuProject } from '../types/menu';
-import { ZoomIn, ZoomOut, Star, ShoppingCart } from 'lucide-react';
+import { ZoomIn, ZoomOut, Star, ShoppingCart, Download, FileImage, FileText, Trash2, Plus, Minus } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface MenuPreviewProps {
   project: MenuProject;
@@ -11,6 +13,42 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
   const { restaurant, categories, style } = project;
   const [zoomLevel, setZoomLevel] = useState(100);
   const [cart, setCart] = useState<{[key: string]: number}>({});
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const exportAsPNG = async () => {
+    if (!menuRef.current) return;
+    const canvas = await html2canvas(menuRef.current);
+    const link = document.createElement('a');
+    link.download = `${restaurant.name || 'menu'}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
+  };
+
+  const exportAsPDF = async () => {
+    if (!menuRef.current) return;
+    const canvas = await html2canvas(menuRef.current);
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'px',
+      format: [canvas.width, canvas.height]
+    });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save(`${restaurant.name || 'menu'}.pdf`);
+  };
+
+  const removeFromCart = (itemId: string) => {
+    if (!restaurant.enableCart) return;
+    setCart(prev => {
+      const newCart = { ...prev };
+      if (newCart[itemId] > 1) {
+        newCart[itemId]--;
+      } else {
+        delete newCart[itemId];
+      }
+      return newCart;
+    });
+  };
 
   const addToCart = (itemId: string) => {
     if (!restaurant.enableCart) return;
@@ -62,20 +100,34 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
   const totalCartItems = Object.values(cart).reduce((sum, count) => sum + count, 0);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-      <div className="sticky top-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-3 z-10">
+    <div className="menu-container rounded-xl shadow-lg overflow-hidden border border-gray-200">
+      <div className="menu-controls px-4 py-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">معاينة المنيو المباشرة</h3>
           <div className="flex items-center gap-2">
+            <button
+              onClick={exportAsPDF}
+              className="zoom-button"
+              title="تصدير كملف PDF"
+            >
+              <FileText className="w-4 h-4" />
+            </button>
+            <button
+              onClick={exportAsPNG}
+              className="zoom-button"
+              title="تصدير كصورة PNG"
+            >
+              <FileImage className="w-4 h-4" />
+            </button>
             {restaurant.enableCart && totalCartItems > 0 && (
-              <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-lg">
+              <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-lg cursor-pointer hover:bg-white/30 transition-colors">
                 <ShoppingCart className="w-4 h-4" />
                 <span className="text-sm">{totalCartItems}</span>
               </div>
             )}
             <button
               onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
-              className="p-1 hover:bg-white/20 rounded"
+              className="zoom-button"
               disabled={zoomLevel <= 50}
             >
               <ZoomOut className="w-4 h-4" />
@@ -83,7 +135,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
             <span className="text-sm">{zoomLevel}%</span>
             <button
               onClick={() => setZoomLevel(Math.min(150, zoomLevel + 10))}
-              className="p-1 hover:bg-white/20 rounded"
+              className="zoom-button"
               disabled={zoomLevel >= 150}
             >
               <ZoomIn className="w-4 h-4" />
@@ -93,6 +145,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
       </div>
       
       <div 
+        ref={menuRef}
         className="p-6 min-h-96 max-h-[600px] overflow-y-auto relative transition-all duration-300"
         style={{ 
           backgroundColor: style.theme === 'dark' ? '#1F2937' : style.backgroundColor,
@@ -126,7 +179,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
 
         <div className="relative z-10">
           {/* Header */}
-          <div className={`flex items-center mb-6 ${
+          <div className={`menu-header flex items-center mb-6 ${
             restaurant.logoPosition === 'top-center' ? 'justify-center text-center' :
             restaurant.logoPosition === 'top-right' ? 'justify-end text-right' : 'justify-start text-left'
           } ${style.animations ? 'animate-fade-in' : ''}`}>
@@ -181,7 +234,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
                       color: style.theme === 'dark' ? '#E5E7EB' : style.secondaryColor,
                       borderRadius: `${style.borderRadius}px`
                     }}
-                    className="font-bold mb-4 pb-2 border-b transition-colors hover:opacity-80"
+                    className="menu-category"
                     dir="rtl"
                   >
                     {category.name}
@@ -196,14 +249,15 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
                     >
                       {category.items.map((item, itemIndex) => (
                         <div 
-                          key={item.id} 
-                          className={`
-                            ${style.layout === 'card' ? `border p-4 ${getShadowClass()}` : 
-                              style.layout === 'list' ? 'flex items-center justify-between border-b pb-2' : 
-                              `border p-3 ${getShadowClass()}`}
-                            ${style.animations ? 'transition-all duration-300 hover:scale-105 hover:shadow-lg' : ''}
-                            ${restaurant.enableCart ? 'cursor-pointer' : ''}
-                          `}
+          key={item.id} 
+          className={`
+            menu-item
+            ${style.layout === 'card' ? `border p-4 ${getShadowClass()}` : 
+              style.layout === 'list' ? 'flex items-center justify-between border-b pb-2' : 
+              `border p-3 ${getShadowClass()}`}
+            ${item.isSpecialOffer ? 'special-offer' : ''}
+            ${restaurant.enableCart ? 'cursor-pointer' : ''}
+          `}
                           style={{ 
                             borderRadius: `${style.borderRadius}px`,
                             backgroundColor: style.layout !== 'list' ? 
@@ -247,7 +301,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
                                     </span>
                                   )}
                                   {restaurant.showRatings && item.rating && (
-                                    <div className="flex items-center gap-1">
+                                    <div className="rating-stars">
                                       <div className="flex">
                                         {renderStars(item.rating)}
                                       </div>
@@ -281,7 +335,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
                                       fontSize: `${style.fontSize.price}px`,
                                       color: style.accentColor
                                     }}
-                                    className="font-bold block"
+                                    className="font-bold block menu-price"
                                   >
                                     {showCurrencyFlag && restaurant.currency.flag} {item.price} {restaurant.currency.symbol}
                                   </span>
@@ -304,7 +358,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
                                 <img 
                                   src={item.image} 
                                   alt={item.name} 
-                                  className="w-full h-32 object-cover mb-3 transition-transform hover:scale-105"
+                                  className="w-full h-32 object-cover mb-3 menu-item-image"
                                   style={{ borderRadius: `${style.borderRadius}px` }}
                                 />
                               )}
@@ -326,7 +380,7 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
                                 )}
                               </div>
                               {item.description && (
-                                <p className="text-sm opacity-80 mb-3" dir="rtl">
+                                <p className="menu-description mb-3" dir="rtl">
                                   {item.description}
                                 </p>
                               )}
@@ -381,7 +435,54 @@ export const MenuPreview: React.FC<MenuPreviewProps> = ({ project, showCurrencyF
                                         {cart[item.id]}
                                       </span>
                                     )}
-                                    <ShoppingCart className="w-4 h-4 text-gray-400" />
+                                    <div className="flex items-center gap-2">
+                                      {cart[item.id] ? (
+                                        <>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              removeFromCart(item.id);
+                                            }}
+                                            className="cart-button"
+                                          >
+                                            <Minus className="w-4 h-4" />
+                                          </button>
+                                          <span className="text-sm">{cart[item.id]}</span>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              addToCart(item.id);
+                                            }}
+                                            className="cart-button"
+                                          >
+                                            <Plus className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setCart(prev => {
+                                                const newCart = { ...prev };
+                                                delete newCart[item.id];
+                                                return newCart;
+                                              });
+                                            }}
+                                            className="cart-button text-red-500"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            addToCart(item.id);
+                                          }}
+                                          className="cart-button"
+                                        >
+                                          <ShoppingCart className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
                               </div>

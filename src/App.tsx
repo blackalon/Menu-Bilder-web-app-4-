@@ -8,6 +8,7 @@ import { ProjectManager } from './components/ProjectManager';
 import { CurrencySelector } from './components/CurrencySelector';
 import { ExcelImporter } from './components/ExcelImporter';
 import { CustomTemplateManager } from './components/CustomTemplateManager';
+import { AIMenuAssistant } from './components/AIMenuAssistant';
 import { useMenuBuilder } from './hooks/useMenuBuilder';
 import { menuTemplates } from './data/templates';
 import { ChefHat, Sparkles, Star, Zap } from 'lucide-react';
@@ -29,7 +30,12 @@ function App() {
     updateCustomTemplate,
     deleteCustomTemplate,
     importFromExcel,
-    exportProject
+    exportProject,
+    // AI features
+    generateAiSuggestions,
+    applyAiSuggestion,
+    isAiLoading,
+    aiError
   } = useMenuBuilder();
 
   const allTemplates = [...menuTemplates, ...customTemplates];
@@ -114,6 +120,17 @@ function App() {
             {/* Excel Import */}
             <div className="animate-slide-in delay-200">
               <ExcelImporter onImport={importFromExcel} />
+            </div>
+            
+            {/* AI Menu Assistant */}
+            <div className="animate-slide-in delay-250">
+              <AIMenuAssistant 
+                onGenerateSuggestions={generateAiSuggestions}
+                onApplySuggestion={applyAiSuggestion}
+                aiHistory={currentProject.aiHistory}
+                isLoading={isAiLoading}
+                error={aiError}
+              />
             </div>
 
             {/* Custom Templates */}
